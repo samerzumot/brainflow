@@ -1,4 +1,4 @@
-﻿using brainflow.math;
+using brainflow.math;
 
 using System;
 using System.Numerics;
@@ -583,6 +583,37 @@ namespace brainflow
 
             double[,] result = data_arr.Reshape(num_rows[0], num_cols[0]);
             return result;
+        }
+
+        /// <summary>
+        /// calculate activity index from 3-axis accelerometer data
+        /// </summary>
+        public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int period = 0)
+        {
+            if (accel_x == null || accel_y == null || accel_z == null)
+            {
+                throw new BrainFlowError ((int)BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR);
+            }
+            if ((accel_x.Length != accel_y.Length) || (accel_x.Length != accel_z.Length))
+            {
+                throw new BrainFlowError ((int)BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR);
+            }
+            if (period <= 0)
+            {
+                period = accel_x.Length;
+            }
+            if (accel_x.Length < period)
+            {
+                throw new BrainFlowError ((int)BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR);
+            }
+            int num_epochs = accel_x.Length / period;
+            double[] output = new double[num_epochs];
+            int res = DataHandlerLibrary.get_activity_index (accel_x, accel_y, accel_z, accel_x.Length, period, output);
+            if (res != (int)BrainFlowExitCodes.STATUS_OK)
+            {
+                throw new BrainFlowError (res);
+            }
+            return output;
         }
 
         /// <summary>

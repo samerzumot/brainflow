@@ -585,6 +585,28 @@ double DataFilter::get_railed_percentage (double *data, int data_len, int gain)
     return output;
 }
 
+double *DataFilter::get_activity_index (const double *accel_x, const double *accel_y,
+    const double *accel_z, int data_len, int period, int *output_len)
+{
+    if ((period <= 0) || (period > data_len))
+    {
+        period = data_len;
+    }
+    int num_epochs = data_len / period;
+    double *output = new double[num_epochs];
+    int res = ::get_activity_index (accel_x, accel_y, accel_z, data_len, period, output);
+    if (res != (int)BrainFlowExitCodes::STATUS_OK)
+    {
+        delete[] output;
+        throw BrainFlowException ("unable to calculate activity index", res);
+    }
+    if (output_len != NULL)
+    {
+        *output_len = num_epochs;
+    }
+    return output;
+}
+
 std::string DataFilter::get_version ()
 {
     char version[64];

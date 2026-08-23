@@ -461,3 +461,21 @@ end
             psd[1], psd[2], length(psd[1]), Float64(freq_start), Float64(freq_end), band_power)
     return band_power[1]
 end
+
+@brainflow_rethrow function get_activity_index(accel_x, accel_y, accel_z, period::Integer=0)
+    if (length(accel_x) != length(accel_y)) || (length(accel_x) != length(accel_z))
+        throw(BrainFlowError(string("Arrays lengths must match ", INVALID_ARGUMENTS_ERROR), Integer(INVALID_ARGUMENTS_ERROR)))
+    end
+    data_len = length(accel_x)
+    if period <= 0
+        period = data_len
+    end
+    if data_len < period
+        throw(BrainFlowError(string("Data length is shorter than period ", INVALID_ARGUMENTS_ERROR), Integer(INVALID_ARGUMENTS_ERROR)))
+    end
+    num_epochs = div(data_len, period)
+    output = Vector{Float64}(undef, num_epochs)
+    ccall((:get_activity_index, DATA_HANDLER_INTERFACE), Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Cint, Cint, Ptr{Float64}),
+            accel_x, accel_y, accel_z, Int32(data_len), Int32(period), output)
+    return output
+end

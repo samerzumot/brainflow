@@ -460,6 +460,26 @@ classdef DataFilter
             data =  transpose(reshape(data_array.Value(1, 1:data_count.Value), [num_cols.Value, num_rows.value]));
         end
         
+        function output = get_activity_index(accel_x, accel_y, accel_z, period)
+            % calculate activity index
+            if nargin < 4
+                period = size(accel_x, 2);
+            end
+            if period <= 0
+                period = size(accel_x, 2);
+            end
+            task_name = 'get_activity_index';
+            temp_input_x = libpointer('doublePtr', accel_x);
+            temp_input_y = libpointer('doublePtr', accel_y);
+            temp_input_z = libpointer('doublePtr', accel_z);
+            lib_name = DataFilter.load_lib();
+            num_epochs = floor(size(accel_x, 2) / period);
+            temp_output = libpointer('doublePtr', zeros(1, num_epochs));
+            exit_code = calllib(lib_name, task_name, temp_input_x, temp_input_y, temp_input_z, size(accel_x, 2), period, temp_output);
+            DataFilter.check_ec(exit_code, task_name);
+            output = temp_output.Value;
+        end
+        
     end
     
 end

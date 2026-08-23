@@ -65,6 +65,7 @@ class DataHandlerDLL extends DataHandlerFunctions
             this.lib.func(CLike.restore_data_from_wavelet_detailed_coeffs);
         this.detectPeaksZScore = this.lib.func(CLike.detect_peaks_z_score);
         this.performIca = this.lib.func(CLike.perform_ica);
+        this.getActivityIndex = this.lib.func(CLike.get_activity_index);
         this.getCsp = this.lib.func(CLike.get_csp);
         this.detrend = this.lib.func(CLike.detrend);
         this.calcStddev = this.lib.func(CLike.calc_stddev);
@@ -606,5 +607,33 @@ export class DataFilter
             throw new BrainFlowError (res, 'Could not calc stddev');
         }
         return output[0];
+    }
+
+    public static getActivityIndex(
+        accelX: number[], accelY: number[], accelZ: number[], period: number = 0): number[]
+    {
+        if (accelX.length !== accelY.length || accelX.length !== accelZ.length)
+        {
+            throw new BrainFlowError (
+                BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR, "arrays lengths must match");
+        }
+        if (period <= 0)
+        {
+            period = accelX.length;
+        }
+        if (accelX.length < period)
+        {
+            throw new BrainFlowError (
+                BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR, "data length is shorter than period");
+        }
+        const numEpochs = Math.trunc(accelX.length / period);
+        const output = [...new Array (numEpochs).fill(0)];
+        const res = DataHandlerDLL.getInstance().getActivityIndex(
+            accelX, accelY, accelZ, accelX.length, period, output);
+        if (res !== BrainFlowExitCodes.STATUS_OK)
+        {
+            throw new BrainFlowError (res, 'Could not calc activity index');
+        }
+        return output;
     }
 }

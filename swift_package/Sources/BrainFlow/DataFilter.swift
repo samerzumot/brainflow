@@ -704,6 +704,27 @@ public enum DataFilter {
         BrainFlowArray.reshape_data_to_2d(num_rows: num_rows, num_cols: num_cols, linear_buffer: linear_buffer)
     }
 
+    public static func get_activity_index(accel_x: [Double], accel_y: [Double], accel_z: [Double], period: Int = 0) throws -> [Double] {
+        guard accel_x.count == accel_y.count, accel_x.count == accel_z.count else { throw invalidArguments("Array lengths must match") }
+        let dataLen = accel_x.count
+        let periodToUse = period <= 0 ? dataLen : period
+        guard periodToUse > 0, dataLen >= periodToUse else { throw invalidArguments("Data length is shorter than period") }
+        let numEpochs = dataLen / periodToUse
+        var output = [Double](repeating: 0.0, count: numEpochs)
+        try accel_x.withUnsafeBufferPointer { xPtr in
+            try accel_y.withUnsafeBufferPointer { yPtr in
+                try accel_z.withUnsafeBufferPointer { zPtr in
+                    try output.withUnsafeMutableBufferPointer { outPtr in
+                        try DataFilterNative.withData { native in
+                            try checkBrainFlowExitCode(native.get_activity_index(xPtr.baseAddress, yPtr.baseAddress, zPtr.baseAddress, CInt(dataLen), CInt(periodToUse), outPtr.baseAddress), "Failed to calculate activity index")
+                        }
+                    }
+                }
+            }
+        }
+        return output
+    }
+
     private static func withMutableData<T>(_ data: inout [Double], _ body: (UnsafeMutablePointer<Double>?, Int) throws -> T) throws -> T {
         try data.withUnsafeMutableBufferPointer { pointer in
             try body(pointer.baseAddress, pointer.count)
@@ -753,6 +774,7 @@ final class DataFilterNative {
     let restore_data_from_wavelet_detailed_coeffs: @convention(c) (UnsafeMutablePointer<Double>?, CInt, CInt, CInt, CInt, UnsafeMutablePointer<Double>?) -> CInt
     let detect_peaks_z_score: @convention(c) (UnsafeMutablePointer<Double>?, CInt, CInt, Double, Double, UnsafeMutablePointer<Double>?) -> CInt
     let perform_ica: @convention(c) (UnsafeMutablePointer<Double>?, CInt, CInt, CInt, UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?) -> CInt
+    let get_activity_index: @convention(c) (UnsafePointer<Double>?, UnsafePointer<Double>?, UnsafePointer<Double>?, CInt, CInt, UnsafeMutablePointer<Double>?) -> CInt
     let set_log_level_data_handler: @convention(c) (CInt) -> CInt
     let set_log_file_data_handler: @convention(c) (UnsafePointer<CChar>?) -> CInt
     let log_message_data_handler: @convention(c) (CInt, UnsafeMutablePointer<CChar>?) -> CInt
@@ -805,6 +827,7 @@ final class DataFilterNative {
         restore_data_from_wavelet_detailed_coeffs = try library.symbol("restore_data_from_wavelet_detailed_coeffs", as: type(of: restore_data_from_wavelet_detailed_coeffs))
         detect_peaks_z_score = try library.symbol("detect_peaks_z_score", as: type(of: detect_peaks_z_score))
         perform_ica = try library.symbol("perform_ica", as: type(of: perform_ica))
+        get_activity_index = try library.symbol("get_activity_index", as: type(of: get_activity_index))
         set_log_level_data_handler = try library.symbol("set_log_level_data_handler", as: type(of: set_log_level_data_handler))
         set_log_file_data_handler = try library.symbol("set_log_file_data_handler", as: type(of: set_log_file_data_handler))
         log_message_data_handler = try library.symbol("log_message_data_handler", as: type(of: log_message_data_handler))

@@ -104,6 +104,9 @@ public class DataFilter
         int perform_ica (double[] data, int rows, int cols, int num_components, double[] w, double[] k, double[] a,
                 double[] s);
 
+        int get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int data_len, int period,
+                double[] output);
+
         int get_version_data_handler (byte[] version, int[] len, int max_len);
 
         int log_message_data_handler (int log_level, String message);
@@ -1071,6 +1074,44 @@ public class DataFilter
             throw new BrainFlowError ("Failed to read data to file", ec);
         }
         return reshape_data_to_2d (num_rows[0], num_cols[0], data_arr);
+    }
+
+    /**
+     * calculate activity index from 3-axis accelerometer data
+     */
+    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int period)
+            throws BrainFlowError
+    {
+        if (accel_x == null || accel_y == null || accel_z == null)
+        {
+            throw new BrainFlowError ("Null pointer passed", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        if ((accel_x.length != accel_y.length) || (accel_x.length != accel_z.length))
+        {
+            throw new BrainFlowError ("Array lengths do not match", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        if (period <= 0)
+        {
+            period = accel_x.length;
+        }
+        if (accel_x.length < period)
+        {
+            throw new BrainFlowError ("Data length is shorter than period", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        int num_epochs = accel_x.length / period;
+        double[] output = new double[num_epochs];
+        int ec = instance.get_activity_index (accel_x, accel_y, accel_z, accel_x.length, period, output);
+        if (ec != BrainFlowExitCode.STATUS_OK.get_code ())
+        {
+            throw new BrainFlowError ("Failed to calculate activity index", ec);
+        }
+        return output;
+    }
+
+    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z)
+            throws BrainFlowError
+    {
+        return get_activity_index (accel_x, accel_y, accel_z, 0);
     }
 
     public static double[] reshape_data_to_1d (int num_rows, int num_cols, double[][] buf)

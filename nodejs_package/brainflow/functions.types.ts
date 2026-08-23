@@ -370,6 +370,8 @@ export enum DataHandlerCLikeFunctions {
         'int detect_peaks_z_score (double *data, int data_len, int lag, double threshold, double influence, _Inout_ double *output)',
     perform_ica =
         'int perform_ica (double *data, int rows, int cols, int num_components, _Inout_ double *w_mat, _Inout_ double *k_mat, _Inout_ double *a_mat, _Inout_ double *s_mat)',
+    get_activity_index =
+        'int get_activity_index (double *accel_x, double *accel_y, double *accel_z, int data_len, int period, _Inout_ double *activity_index)',
     get_csp =
         'int get_csp (const double *data, const double *labels, int n_epochs, int n_channels, int n_times, _Inout_ double *output_w, _Inout_ double *output_d)',
     get_railed_percentage =
@@ -445,6 +447,8 @@ export class DataHandlerFunctions
         influence: number, output: number[]) => BrainFlowExitCodes;
     performIca!: (data: number[], rows: number, cols: number, numComponents: number, wMat: number[],
         kMat: number[], aMat: number[], sMat: number[]) => BrainFlowExitCodes;
+    getActivityIndex!: (accelX: number[], accelY: number[], accelZ: number[], dataLen: number,
+        period: number, activityIndex: number[]) => BrainFlowExitCodes;
     getCsp!: (data: number[], labels: number[], nEpochs: number, nChannels: number, nTimes: number,
         outputW: number[], outputD: number[]) => BrainFlowExitCodes;
     detrend!: (rawData: number[], dataLen: number, detrendOperation: number) => BrainFlowExitCodes;

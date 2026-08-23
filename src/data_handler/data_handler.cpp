@@ -1726,6 +1726,54 @@ int perform_ica (double *data, int rows, int cols, int num_components, double *w
     return res;
 }
 
+int get_activity_index (const double *accel_x, const double *accel_y, const double *accel_z,
+    int data_len, int period, double *output)
+{
+    if ((accel_x == NULL) || (accel_y == NULL) || (accel_z == NULL) || (output == NULL) ||
+        (period <= 0) || (data_len < period))
+    {
+        data_logger->error ("Invalid arguments for get_activity_index: accel_x {}, accel_y {}, "
+                            "accel_z {}, output {}, data_len {}, period {}",
+            (accel_x != NULL), (accel_y != NULL), (accel_z != NULL), (output != NULL), data_len,
+            period);
+        return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
+    }
+
+    int num_epochs = data_len / period;
+    for (int epoch = 0; epoch < num_epochs; epoch++)
+    {
+        int start_pos = epoch * period;
+        int end_pos = start_pos + period;
+
+        double mean_x = 0.0, mean_y = 0.0, mean_z = 0.0;
+        for (int i = start_pos; i < end_pos; i++)
+        {
+            mean_x += accel_x[i];
+            mean_y += accel_y[i];
+            mean_z += accel_z[i];
+        }
+        mean_x /= period;
+        mean_y /= period;
+        mean_z /= period;
+
+        double var_x = 0.0, var_y = 0.0, var_z = 0.0;
+        for (int i = start_pos; i < end_pos; i++)
+        {
+            var_x += (accel_x[i] - mean_x) * (accel_x[i] - mean_x);
+            var_y += (accel_y[i] - mean_y) * (accel_y[i] - mean_y);
+            var_z += (accel_z[i] - mean_z) * (accel_z[i] - mean_z);
+        }
+        var_x /= period;
+        var_y /= period;
+        var_z /= period;
+
+        double total_var = (var_x + var_y + var_z) / 3.0;
+        output[epoch] = sqrt (std::max (0.0, total_var));
+    }
+
+    return (int)BrainFlowExitCodes::STATUS_OK;
+}
+
 int get_version_data_handler (char *version, int *num_chars, int max_chars)
 {
     strncpy (version, BRAINFLOW_VERSION_STRING, max_chars);

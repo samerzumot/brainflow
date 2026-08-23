@@ -236,6 +236,18 @@ public:
         BrainFlowArray<double, 2>, BrainFlowArray<double, 2>>
     perform_ica (const BrainFlowArray<double, 2> &data, int num_components);
 
+    /**
+     * calculate activity index from 3-axis accelerometer data
+     * @param accel_x input 1d array
+     * @param accel_y input 1d array
+     * @param accel_z input 1d array
+     * @param data_len size of array
+     * @param period epoch length in samples (defaults to data_len if <= 0)
+     * @param output_len pointer to int to store number of epochs calculated
+     * @return pointer to array of activity indices
+     */
+    static double *get_activity_index (const double *accel_x, const double *accel_y,
+        const double *accel_z, int data_len, int period, int *output_len);
 
     /// get brainflow version
     static std::string get_version ();

@@ -536,6 +536,17 @@ class DataHandlerDLL(object):
             ndpointer(ctypes.c_double)
         ]
 
+        self.get_activity_index = self.lib.get_activity_index
+        self.get_activity_index.restype = ctypes.c_int
+        self.get_activity_index.argtypes = [
+            ndpointer(ctypes.c_double),
+            ndpointer(ctypes.c_double),
+            ndpointer(ctypes.c_double),
+            ctypes.c_int,
+            ctypes.c_int,
+            ndpointer(ctypes.c_double)
+        ]
+
         self.get_version_data_handler = self.lib.get_version_data_handler
         self.get_version_data_handler.restype = ctypes.c_int
         self.get_version_data_handler.argtypes = [
@@ -1291,6 +1302,40 @@ class DataFilter(object):
         if res != BrainFlowExitCodes.STATUS_OK.value:
             raise BrainFlowError('unable to perform ifft', res)
 
+        return output
+
+    @classmethod
+    def get_activity_index(cls, accel_x, accel_y, accel_z, period: int = 0):
+        """get activity index from 3-axis accelerometer data
+
+        :param accel_x: acceleration X data
+        :type accel_x: NDArray[Shape["*"], Float64]
+        :param accel_y: acceleration Y data
+        :type accel_y: NDArray[Shape["*"], Float64]
+        :param accel_z: acceleration Z data
+        :type accel_z: NDArray[Shape["*"], Float64]
+        :param period: epoch length in samples (defaults to full data length if 0)
+        :type period: int
+        :return: activity index values
+        :rtype: NDArray[Shape["*"], Float64]
+        """
+        check_memory_layout_row_major(accel_x, 1)
+        check_memory_layout_row_major(accel_y, 1)
+        check_memory_layout_row_major(accel_z, 1)
+        if not (accel_x.shape[0] == accel_y.shape[0] == accel_z.shape[0]):
+            raise BrainFlowError('invalid shapes', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
+        data_len = accel_x.shape[0]
+        if period <= 0:
+            period = data_len
+        if data_len < period:
+            raise BrainFlowError('data length is shorter than period', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
+        num_epochs = data_len // period
+        output = numpy.zeros(num_epochs).astype(numpy.float64)
+        res = DataHandlerDLL.get_instance().get_activity_index(
+            accel_x, accel_y, accel_z, data_len, period, output
+        )
+        if res != BrainFlowExitCodes.STATUS_OK.value:
+            raise BrainFlowError('unable to calculate activity index', res)
         return output
 
     @classmethod

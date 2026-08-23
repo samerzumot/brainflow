@@ -859,6 +859,39 @@ where
     Ok(check_brainflow_exit_code(res)?)
 }
 
+/// Calculate activity index from 3-axis accelerometer data.
+pub fn get_activity_index(
+    accel_x: &[f64],
+    accel_y: &[f64],
+    accel_z: &[f64],
+    period: Option<usize>,
+) -> Result<Vec<f64>> {
+    if accel_x.len() != accel_y.len() || accel_x.len() != accel_z.len() {
+        return Err(BrainFlowError::InvalidArguments);
+    }
+    let data_len = accel_x.len();
+    let period = period.unwrap_or(data_len);
+    if period == 0 || data_len < period {
+        return Err(BrainFlowError::InvalidArguments);
+    }
+    let num_epochs = data_len / period;
+    let mut output = Vec::<f64>::with_capacity(num_epochs);
+    let res = unsafe {
+        data_handler::get_activity_index(
+            accel_x.as_ptr() as *const c_double,
+            accel_y.as_ptr() as *const c_double,
+            accel_z.as_ptr() as *const c_double,
+            data_len as c_int,
+            period as c_int,
+            output.as_mut_ptr() as *mut c_double,
+        )
+    };
+    check_brainflow_exit_code(res)?;
+
+    unsafe { output.set_len(num_epochs) };
+    Ok(output)
+}
+
 /// Get DataFilter version.
 pub fn get_version() -> Result<String> {
     const MAX_CHARS: usize = 64;
