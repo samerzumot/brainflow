@@ -126,6 +126,7 @@ public enum BrainFlowClassifiers: Int, CaseIterable, Sendable {
     case DEFAULT_CLASSIFIER = 0
     case DYN_LIB_CLASSIFIER = 1
     case ONNX_CLASSIFIER = 2
+    case MOVING_AVERAGE_CLASSIFIER = 3
 
     public var code: Int { rawValue }
 }

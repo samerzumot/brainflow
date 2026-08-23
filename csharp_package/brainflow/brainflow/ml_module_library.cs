@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -19,7 +19,8 @@ namespace brainflow
     {
         DEFAULT_CLASSIFIER = 0,
         DYN_LIB_CLASSIFIER = 1,
-        ONNX_CLASSIFIER = 2
+        ONNX_CLASSIFIER = 2,
+        MOVING_AVERAGE_CLASSIFIER = 3
     };
 
     public static class MLModuleLibrary64

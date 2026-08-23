@@ -157,6 +157,7 @@ pub enum BrainFlowClassifiers {
     DefaultClassifier = 0,
     DynLibClassifier = 1,
     OnnxClassifier = 2,
+    MovingAverageClassifier = 3,
 }
 #[repr(i32)]
 #[derive(FromPrimitive, ToPrimitive, Debug, Copy, Clone, Hash, PartialEq, Eq)]

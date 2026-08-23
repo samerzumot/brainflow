@@ -8,7 +8,8 @@ public enum BrainFlowClassifiers
 
     DEFAULT_CLASSIFIER (0),
     DYN_LIB_CLASSIFIER (1),
-    ONNX_CLASSIFIER (2);
+    ONNX_CLASSIFIER (2),
+    MOVING_AVERAGE_CLASSIFIER (3);
 
     private final int protocol;
     private static final Map<Integer, BrainFlowClassifiers> cl_map = new HashMap<Integer, BrainFlowClassifiers> ();
