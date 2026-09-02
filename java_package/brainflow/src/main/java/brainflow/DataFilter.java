@@ -104,8 +104,8 @@ public class DataFilter
         int perform_ica (double[] data, int rows, int cols, int num_components, double[] w, double[] k, double[] a,
                 double[] s);
 
-        int get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int data_len, int period,
-                double[] output);
+        int get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int data_len, int sampling_rate, int period,
+                double noise_var_x, double noise_var_y, double noise_var_z, double[] output);
 
         int get_version_data_handler (byte[] version, int[] len, int max_len);
 
@@ -1077,10 +1077,10 @@ public class DataFilter
     }
 
     /**
-     * calculate activity index from 3-axis accelerometer data
+     * calculate activity index from 3-axis accelerometer data using Bai et al. (2016) formulation
      */
-    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int period)
-            throws BrainFlowError
+    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int sampling_rate, int period,
+            double noise_var_x, double noise_var_y, double noise_var_z) throws BrainFlowError
     {
         if (accel_x == null || accel_y == null || accel_z == null)
         {
@@ -1090,17 +1090,34 @@ public class DataFilter
         {
             throw new BrainFlowError ("Array lengths do not match", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
         }
+        if (accel_x.length == 0)
+        {
+            throw new BrainFlowError ("Input arrays must not be empty", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        if (sampling_rate <= 0 || accel_x.length < sampling_rate)
+        {
+            throw new BrainFlowError ("Invalid sampling rate or data length shorter than 1 second", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
         if (period <= 0)
         {
-            period = accel_x.length;
+            period = accel_x.length - (accel_x.length % sampling_rate);
         }
-        if (accel_x.length < period)
+        if (period < sampling_rate || accel_x.length < period || (period % sampling_rate != 0))
+        {
+            throw new BrainFlowError ("Invalid period or data length is shorter than period", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        if (noise_var_x < 0 || noise_var_y < 0 || noise_var_z < 0)
+        {
+            throw new BrainFlowError ("Noise variances must be non-negative", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        int num_epochs = accel_x.length / period;
+        if (num_epochs == 0)
         {
             throw new BrainFlowError ("Data length is shorter than period", BrainFlowExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
         }
-        int num_epochs = accel_x.length / period;
         double[] output = new double[num_epochs];
-        int ec = instance.get_activity_index (accel_x, accel_y, accel_z, accel_x.length, period, output);
+        int ec = instance.get_activity_index (accel_x, accel_y, accel_z, accel_x.length, sampling_rate, period,
+                noise_var_x, noise_var_y, noise_var_z, output);
         if (ec != BrainFlowExitCode.STATUS_OK.get_code ())
         {
             throw new BrainFlowError ("Failed to calculate activity index", ec);
@@ -1108,10 +1125,16 @@ public class DataFilter
         return output;
     }
 
-    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z)
+    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int sampling_rate, int period)
             throws BrainFlowError
     {
-        return get_activity_index (accel_x, accel_y, accel_z, 0);
+        return get_activity_index (accel_x, accel_y, accel_z, sampling_rate, period, 0.0, 0.0, 0.0);
+    }
+
+    public static double[] get_activity_index (double[] accel_x, double[] accel_y, double[] accel_z, int sampling_rate)
+            throws BrainFlowError
+    {
+        return get_activity_index (accel_x, accel_y, accel_z, sampling_rate, 0, 0.0, 0.0, 0.0);
     }
 
     public static double[] reshape_data_to_1d (int num_rows, int num_cols, double[][] buf)

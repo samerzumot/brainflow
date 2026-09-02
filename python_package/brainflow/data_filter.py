@@ -544,6 +544,10 @@ class DataHandlerDLL(object):
             ndpointer(ctypes.c_double),
             ctypes.c_int,
             ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_double,
             ndpointer(ctypes.c_double)
         ]
 
@@ -1305,8 +1309,18 @@ class DataFilter(object):
         return output
 
     @classmethod
-    def get_activity_index(cls, accel_x, accel_y, accel_z, period: int = 0):
-        """get activity index from 3-axis accelerometer data
+    def get_activity_index(
+        cls,
+        accel_x,
+        accel_y,
+        accel_z,
+        sampling_rate: int,
+        period: int = 0,
+        noise_var_x: float = 0.0,
+        noise_var_y: float = 0.0,
+        noise_var_z: float = 0.0,
+    ):
+        """get activity index from 3-axis accelerometer data using the Bai et al. (2016) formulation
 
         :param accel_x: acceleration X data
         :type accel_x: NDArray[Shape["*"], Float64]
@@ -1314,8 +1328,16 @@ class DataFilter(object):
         :type accel_y: NDArray[Shape["*"], Float64]
         :param accel_z: acceleration Z data
         :type accel_z: NDArray[Shape["*"], Float64]
-        :param period: epoch length in samples (defaults to full data length if 0)
+        :param sampling_rate: sampling rate of accelerometer in Hz
+        :type sampling_rate: int
+        :param period: epoch length in samples (defaults to full integer seconds of data if 0)
         :type period: int
+        :param noise_var_x: baseline rest noise variance for X axis
+        :type noise_var_x: float
+        :param noise_var_y: baseline rest noise variance for Y axis
+        :type noise_var_y: float
+        :param noise_var_z: baseline rest noise variance for Z axis
+        :type noise_var_z: float
         :return: activity index values
         :rtype: NDArray[Shape["*"], Float64]
         """
@@ -1325,14 +1347,23 @@ class DataFilter(object):
         if not (accel_x.shape[0] == accel_y.shape[0] == accel_z.shape[0]):
             raise BrainFlowError('invalid shapes', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
         data_len = accel_x.shape[0]
+        if data_len == 0:
+            raise BrainFlowError('input arrays must not be empty', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
+        if sampling_rate <= 0 or data_len < sampling_rate:
+            raise BrainFlowError('invalid sampling rate or data shorter than 1 second', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
         if period <= 0:
-            period = data_len
-        if data_len < period:
-            raise BrainFlowError('data length is shorter than period', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
+            period = data_len - (data_len % sampling_rate)
+        if period < sampling_rate or data_len < period or (period % sampling_rate != 0):
+            raise BrainFlowError('invalid period or data length shorter than period', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
+        if noise_var_x < 0.0 or noise_var_y < 0.0 or noise_var_z < 0.0:
+            raise BrainFlowError('noise variances must be non-negative', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
         num_epochs = data_len // period
+        if num_epochs == 0:
+            raise BrainFlowError('data length is shorter than period', BrainFlowExitCodes.INVALID_ARGUMENTS_ERROR.value)
         output = numpy.zeros(num_epochs).astype(numpy.float64)
         res = DataHandlerDLL.get_instance().get_activity_index(
-            accel_x, accel_y, accel_z, data_len, period, output
+            accel_x, accel_y, accel_z, data_len, sampling_rate, period,
+            noise_var_x, noise_var_y, noise_var_z, output
         )
         if res != BrainFlowExitCodes.STATUS_OK.value:
             raise BrainFlowError('unable to calculate activity index', res)

@@ -242,12 +242,18 @@ public:
      * @param accel_y input 1d array
      * @param accel_z input 1d array
      * @param data_len size of array
-     * @param period epoch length in samples (defaults to data_len if <= 0)
+     * @param sampling_rate sampling rate in Hz
+     * @param period epoch length in samples (defaults to full integer seconds if <= 0)
+     * @param noise_var_x baseline rest noise variance for X axis (default 0.0)
+     * @param noise_var_y baseline rest noise variance for Y axis (default 0.0)
+     * @param noise_var_z baseline rest noise variance for Z axis (default 0.0)
      * @param output_len pointer to int to store number of epochs calculated
      * @return pointer to array of activity indices
      */
     static double *get_activity_index (const double *accel_x, const double *accel_y,
-        const double *accel_z, int data_len, int period, int *output_len);
+        const double *accel_z, int data_len, int sampling_rate, int period = 0,
+        double noise_var_x = 0.0, double noise_var_y = 0.0, double noise_var_z = 0.0,
+        int *output_len = NULL);
 
     /// get brainflow version
     static std::string get_version ();

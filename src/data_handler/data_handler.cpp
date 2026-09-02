@@ -1727,48 +1727,65 @@ int perform_ica (double *data, int rows, int cols, int num_components, double *w
 }
 
 int get_activity_index (const double *accel_x, const double *accel_y, const double *accel_z,
-    int data_len, int period, double *output)
+    int data_len, int sampling_rate, int period, double noise_var_x, double noise_var_y,
+    double noise_var_z, double *output)
 {
     if ((accel_x == NULL) || (accel_y == NULL) || (accel_z == NULL) || (output == NULL) ||
-        (period <= 0) || (data_len < period))
+        (data_len <= 0) || (sampling_rate <= 0) || (period < sampling_rate) ||
+        (data_len < period) || (period % sampling_rate != 0) || (noise_var_x < 0.0) ||
+        (noise_var_y < 0.0) || (noise_var_z < 0.0))
     {
         data_logger->error ("Invalid arguments for get_activity_index: accel_x {}, accel_y {}, "
-                            "accel_z {}, output {}, data_len {}, period {}",
+                            "accel_z {}, output {}, data_len {}, sampling_rate {}, period {}, "
+                            "noise_var_x {}, noise_var_y {}, noise_var_z {}",
             (accel_x != NULL), (accel_y != NULL), (accel_z != NULL), (output != NULL), data_len,
-            period);
+            sampling_rate, period, noise_var_x, noise_var_y, noise_var_z);
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
+    int sec_per_epoch = period / sampling_rate;
     int num_epochs = data_len / period;
+
     for (int epoch = 0; epoch < num_epochs; epoch++)
     {
-        int start_pos = epoch * period;
-        int end_pos = start_pos + period;
-
-        double mean_x = 0.0, mean_y = 0.0, mean_z = 0.0;
-        for (int i = start_pos; i < end_pos; i++)
+        double epoch_ai = 0.0;
+        int epoch_start_sec = epoch * sec_per_epoch;
+        for (int sec = 0; sec < sec_per_epoch; sec++)
         {
-            mean_x += accel_x[i];
-            mean_y += accel_y[i];
-            mean_z += accel_z[i];
-        }
-        mean_x /= period;
-        mean_y /= period;
-        mean_z /= period;
+            int sec_idx = epoch_start_sec + sec;
+            int start_pos = sec_idx * sampling_rate;
+            int end_pos = start_pos + sampling_rate;
 
-        double var_x = 0.0, var_y = 0.0, var_z = 0.0;
-        for (int i = start_pos; i < end_pos; i++)
-        {
-            var_x += (accel_x[i] - mean_x) * (accel_x[i] - mean_x);
-            var_y += (accel_y[i] - mean_y) * (accel_y[i] - mean_y);
-            var_z += (accel_z[i] - mean_z) * (accel_z[i] - mean_z);
-        }
-        var_x /= period;
-        var_y /= period;
-        var_z /= period;
+            double mean_x = 0.0, mean_y = 0.0, mean_z = 0.0;
+            for (int i = start_pos; i < end_pos; i++)
+            {
+                mean_x += accel_x[i];
+                mean_y += accel_y[i];
+                mean_z += accel_z[i];
+            }
+            mean_x /= sampling_rate;
+            mean_y /= sampling_rate;
+            mean_z /= sampling_rate;
 
-        double total_var = (var_x + var_y + var_z) / 3.0;
-        output[epoch] = sqrt (std::max (0.0, total_var));
+            double var_x = 0.0, var_y = 0.0, var_z = 0.0;
+            for (int i = start_pos; i < end_pos; i++)
+            {
+                var_x += (accel_x[i] - mean_x) * (accel_x[i] - mean_x);
+                var_y += (accel_y[i] - mean_y) * (accel_y[i] - mean_y);
+                var_z += (accel_z[i] - mean_z) * (accel_z[i] - mean_z);
+            }
+            var_x /= sampling_rate;
+            var_y /= sampling_rate;
+            var_z /= sampling_rate;
+
+            double adj_x = var_x - noise_var_x;
+            double adj_y = var_y - noise_var_y;
+            double adj_z = var_z - noise_var_z;
+            double mean_adj = (adj_x + adj_y + adj_z) / 3.0;
+            double ai_1sec = sqrt (std::max (0.0, mean_adj));
+            epoch_ai += ai_1sec;
+        }
+        output[epoch] = epoch_ai;
     }
 
     return (int)BrainFlowExitCodes::STATUS_OK;
