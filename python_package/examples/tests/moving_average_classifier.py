@@ -147,8 +147,69 @@ def test_moving_average_classifier():
     assert np.isclose(neg_out2, raw_score_2)
     neg_model.release()
 
+    # 8. Test multi-element (vector) output moving average with DYN_LIB_CLASSIFIER
+    import platform
+    import shutil
+    import subprocess
+    import tempfile
+
+    cc = shutil.which('clang') or shutil.which('gcc') or shutil.which('cc')
+    if cc:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            c_code = """
+#if defined(_WIN32)
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__((visibility("default")))
+#endif
+
+EXPORT int prepare(void *cls, void *params) { return 0; }
+EXPORT int predict(double *data, int data_len, double *output, int *output_len, void *params) {
+    output[0] = (data_len > 0) ? data[0] : 1.0;
+    output[1] = (data_len > 1) ? data[1] * 2.0 : 2.0;
+    output[2] = (data_len > 2) ? data[2] * 3.0 : 3.0;
+    *output_len = 3;
+    return 0;
+}
+EXPORT int release(void *params) { return 0; }
+"""
+            c_file = os.path.join(tmpdir, 'plugin.c')
+            ext = '.dylib' if platform.system() == 'Darwin' else ('.dll' if platform.system() == 'Windows' else '.so')
+            so_file = os.path.join(tmpdir, 'libplugin' + ext)
+            with open(c_file, 'w') as f:
+                f.write(c_code)
+            cmd = [cc, '-shared', '-fPIC', c_file, '-o', so_file]
+            if subprocess.call(cmd) == 0:
+                vec_params = BrainFlowModelParams(
+                    BrainFlowMetrics.USER_DEFINED.value,
+                    BrainFlowClassifiers.DYN_LIB_CLASSIFIER.value
+                )
+                vec_params.file = so_file
+                vec_params.other_info = '{"window_len": 2}'
+                vec_model = MLModel(vec_params)
+                vec_model.prepare()
+
+                # Feed sample 1: [10, 10, 10] -> plugin returns [10, 20, 30]
+                vec_out1 = vec_model.predict(np.array([10.0, 10.0, 10.0], dtype=np.float64))
+                assert len(vec_out1) == 3
+                assert np.allclose(vec_out1, [10.0, 20.0, 30.0])
+
+                # Feed sample 2: [20, 20, 20] -> plugin returns [20, 40, 60] -> window avg = [15, 30, 45]
+                vec_out2 = vec_model.predict(np.array([20.0, 20.0, 20.0], dtype=np.float64))
+                assert len(vec_out2) == 3
+                assert np.allclose(vec_out2, [15.0, 30.0, 45.0])
+
+                # Feed sample 3: [20, 20, 20] -> window pops sample 1 -> avg = [20, 40, 60]
+                vec_out3 = vec_model.predict(np.array([20.0, 20.0, 20.0], dtype=np.float64))
+                assert len(vec_out3) == 3
+                assert np.allclose(vec_out3, [20.0, 40.0, 60.0])
+
+                vec_model.release()
+                print("Vector output moving average test passed successfully!")
+
     print("All moving average classifier tests passed successfully!")
 
 
 if __name__ == '__main__':
     test_moving_average_classifier()
+

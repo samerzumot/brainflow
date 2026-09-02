@@ -55,9 +55,9 @@ public:
         }
     }
 
-    virtual int prepare ();
-    virtual int predict (double *data, int data_len, double *output, int *output_len);
-    virtual int release ();
+    int prepare ();
+    int predict (double *data, int data_len, double *output, int *output_len);
+    int release ();
 
 protected:
     bool use_moving_average;
