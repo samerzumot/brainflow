@@ -11,7 +11,6 @@
 #include "dyn_lib_classifier.h"
 #include "mindfulness_classifier.h"
 #include "ml_module.h"
-#include "moving_average_classifier.h"
 #include "onnx_classifier.h"
 #include "restfulness_classifier.h"
 
@@ -62,10 +61,6 @@ int prepare (const char *json_params)
         (key.classifier == (int)BrainFlowClassifiers::DEFAULT_CLASSIFIER))
     {
         model = std::shared_ptr<BaseClassifier> (new RestfulnessClassifier (key));
-    }
-    else if (key.classifier == (int)BrainFlowClassifiers::MOVING_AVERAGE_CLASSIFIER)
-    {
-        model = std::shared_ptr<BaseClassifier> (new MovingAverageClassifier (key));
     }
     else
     {

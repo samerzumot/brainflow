@@ -27,7 +27,6 @@ class BrainFlowClassifiers(enum.IntEnum):
     DEFAULT_CLASSIFIER = 0  #:
     DYN_LIB_CLASSIFIER = 1  #:
     ONNX_CLASSIFIER = 2  #:
-    MOVING_AVERAGE_CLASSIFIER = 3  #:
 
 
 class BrainFlowModelParams(object):
@@ -39,7 +38,7 @@ class BrainFlowModelParams(object):
     :type classifier: int
     :param file: file to load model
     :type file: str
-    :param other_info: additional information
+    :param other_info: additional information or configuration (e.g. moving average smoothing via `{"window_len": 5}` or `moving_average=5`)
     :type other_info: str
     :param output_name: output node name
     :type output_name: str

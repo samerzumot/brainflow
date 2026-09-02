@@ -16,7 +16,6 @@ MetricType = Union{BrainFlowMetrics, Integer}
     DEFAULT_CLASSIFIER = 0
     DYN_LIB_CLASSIFIER = 1
     ONNX_CLASSIFIER = 2
-    MOVING_AVERAGE_CLASSIFIER = 3
 
 end
 

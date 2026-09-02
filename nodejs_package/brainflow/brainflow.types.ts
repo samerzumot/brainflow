@@ -241,7 +241,6 @@ export enum BrainFlowClassifiers {
     DEFAULT_CLASSIFIER = 0,
     USER_DEFINED = 1,
     ONNX_CLASSIFIER = 2,
-    MOVING_AVERAGE_CLASSIFIER = 3,
 }
 
 export interface IBrainFlowInputParams {
